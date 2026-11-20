@@ -171,7 +171,8 @@ bash cmd-tools-cancel-users.sh mysite strapi
 ```
 
 The admin allows 5 logins of an account in 5 minutes from one address, and these tools log in as the
-workspace account once per run: run them a few at a time.
+workspace account once per run. A run that meets the limit says so and waits for it to end (at most
+five minutes), then goes on.
 
 ### Test an app
 
