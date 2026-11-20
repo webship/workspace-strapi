@@ -8,8 +8,9 @@ wired into the workspace's testing setup, and its AI items — two agents, a ski
 prompts — each listed in the workspace folder of its kind.
 
 The workspace is container-based (DDEV by default): a Strapi app is a row like any other, so the row
-menus the core draws (start, stop, launch, backup, clone, remove, tests) work on it unchanged. The
-row's Users menu does not apply to a Strapi app: see [The default accounts](#the-default-accounts).
+menus the core draws (start, stop, launch, backup, clone, remove, tests) work on it unchanged, but
+for its accounts: a Strapi app's row has no Users menu, and the test users items of its Tests menu
+are not for it. See [The default accounts](#the-default-accounts).
 
 It is made from the reference platform plugin, `@webship.co/workspace-wordpress`, and runs its apps
 the way the Gatsby and Django plugins run theirs: a generic project, the language in the web image,
@@ -91,7 +92,7 @@ reference and changes only this:
 | Getting the code | `wp core download` | `npx create-strapi@latest app --skip-cloud`: the official installer, without the cloud login, TypeScript, npm |
 | Install | `wp core install` | `strapi build` for production; with `--install` the workspace account is made the Super Admin with `strapi admin:create-user` |
 | Accounts | WP-CLI | `scripts/strapi-site.mjs`, through the admin's own API (the role API) |
-| Users menu of the row | Reads the project type | Does not apply (the type is `generic`): the Strapi CLI tool's `--add-users`, or `cmd-tools-add-users.sh <name> strapi` |
+| Users menu of the row | Reads the project type | None (the type is `generic`; the Tests menu's test users items hand it the Webship list): the Strapi CLI tool's `--add-users`, or `cmd-tools-add-users.sh <name> strapi` |
 
 The Community Edition only: the installer runs with `--skip-cloud` (no cloud login, no trial),
 telemetry is off (`STRAPI_TELEMETRY_DISABLED=true`, and `telemetryDisabled` in the app's
@@ -159,9 +160,12 @@ The admin logs in with the email address. Each account has the password of the w
 default lists. They are for local apps and for tests; the app's Super Admin from `--install` is the
 workspace account and is never written into a test.
 
-**Manage them with the Strapi CLI tool, not the row's Users menu.** The dashboard's Users menu picks
-its actions by the project type, and a Strapi app's type is `generic`, so the menu offers no action
-that applies to it. Use:
+**Manage them with the Strapi CLI tool, not the dashboard's menus.** The dashboard picks a project's
+account list by its type, and a Strapi app's type is `generic`: its row has no Users menu, and the
+"Add the test users" and "Cancel the test users" items of its Tests menu hand it the list of the
+Webship distribution, which starts by adding Drush to the project with Composer. Leave those two
+items alone on a Strapi app until the base asks the plugins which list a project takes
+(webship/workspace#490). Use:
 
 ```bash
 bash cmd-tools-strapi-cli.sh mysite --add-users      # add them, or give them back their name, password, role and active state
