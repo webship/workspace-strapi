@@ -192,6 +192,37 @@ test('the CLI tool refuses a project that is not a Strapi app of the plugin', ()
   assert.match(r.stdout, /is not a Strapi project of this plugin/);
 });
 
+/** The CLI tool with --update, on a container tool that answers the upgrade tool's command as `upgrade` says. */
+function update(upgrade: string) {
+  const p = project('strapi');
+  const fake = `ddev() {
+    case "$*" in
+      describe*) echo '{"raw":{"status":"running"}}' ;;
+      *@strapi/upgrade*) ${upgrade} ;;
+      *) echo "ddev $*" >> "${path.join(p.root, 'calls.log')}" ;;
+    esac
+  }`;
+  const r = bash(`${fake}\nPROJECT_NAME=site1 ; RUN=_none_ ; BUILD=no ; RESTART=no ; ADD_USERS=no ; CANCEL_USERS=no ; UPDATE=yes ; trim_project_name() { :; } ; strapi_version() { echo 5.63.0 ; } ; strapi_cli_tool`, { WORKSPACE_ROOT: p.root, doc_name: 'dev' });
+  const calls = fs.existsSync(path.join(p.root, 'calls.log')) ? fs.readFileSync(path.join(p.root, 'calls.log'), 'utf8') : '';
+  return { r, calls };
+}
+
+test('--update on an app already on the latest release of its major release has nothing to do, and says so', () => {
+  const { r, calls } = update(`echo '[ERROR] The project is already up-to-date (minor)' ; return 1`);
+  assert.strictEqual(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /already up-to-date \(minor\)/, 'the tool\'s own answer stays on screen');
+  assert.match(r.stdout, /Strapi 5\.63\.0 is the latest release of its major release: nothing to update\./);
+  assert.doesNotMatch(calls, /npm run build|supervisorctl/, 'no build and no restart');
+});
+
+test('--update stops when the upgrade tool fails for another reason', () => {
+  const { r, calls } = update(`echo '[ERROR] Something else went wrong' ; return 1`);
+  assert.strictEqual(r.status, 1, r.stdout + r.stderr);
+  assert.match(r.stdout, /Something else went wrong/);
+  assert.doesNotMatch(r.stdout, /nothing to update/);
+  assert.doesNotMatch(calls, /npm run build/);
+});
+
 test('the first feature names no platform in a step, and no password', () => {
   const feature = fs.readFileSync(path.join(PKG, 'testing', 'site.feature'), 'utf8');
   const steps = feature.split('\n').filter((l) => /^\s*(Given|When|Then|And|But) /.test(l));

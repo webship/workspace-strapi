@@ -305,9 +305,23 @@ function strapi_cli_tool() {
     strapi_production_build || exit 1 ;
     echo "Strapi $(strapi_version): the new build is served at https://${PROJECT_NAME}.ddev.site/admin" ;
   elif [ "${UPDATE}" == 'yes' ] ; then
-    local installed ; installed="$(strapi_version)" ;
+    local installed output status ; installed="$(strapi_version)" ;
     echo "Strapi ${installed} is installed; updating within its major release with the official upgrade tool." ;
-    ddev exec -d "${STRAPI_APP}" "npx -y @strapi/upgrade minor --yes" < /dev/null || exit 1 ;
+    # The tool's output stays on screen as it comes; it is kept to read its answer. On an app already on
+    # the latest release of its major release, the tool says so and exits with 1: nothing to do then.
+    output="$(mktemp)" ;
+    ddev exec -d "${STRAPI_APP}" "npx -y @strapi/upgrade minor --yes" < /dev/null 2>&1 | tee "${output}" ;
+    status=${PIPESTATUS[0]} ;
+    if [ "${status}" -ne 0 ] ; then
+      if grep -q 'already up-to-date' "${output}" ; then
+        rm -f "${output}" ;
+        echo "Strapi ${installed} is the latest release of its major release: nothing to update." ;
+        exit 0 ;
+      fi
+      rm -f "${output}" ;
+      exit 1 ;
+    fi
+    rm -f "${output}" ;
     strapi_production_build || exit 1 ;
     echo "Strapi $(strapi_version) is running." ;
   elif [ "${RESTART}" == 'yes' ] ; then
