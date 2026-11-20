@@ -84,7 +84,7 @@ is `generic`: use `--add-users` and `--cancel-users` of the Strapi CLI tool, or
 The admin logs in with the email address. Each account has the password of the workspace's other
 default lists. They are for local apps and for tests. Adding them again gives back the name, the
 password, the role and the active state. The admin allows 5 logins of an account in 5 minutes from one
-address: the tool logs in once per run.
+address: the tool logs in once per run, and a run that meets the limit waits for it to end (it says so).
 
 ## Rules
 

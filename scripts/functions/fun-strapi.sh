@@ -163,7 +163,10 @@ def account(row):
 accounts = [account(row) for row in os.environ["STRAPI_ROWS"].split("\x1e") if row]
 owner = {"handle": "owner", "firstname": os.environ["STRAPI_OWNER_NAME"], "lastname": "", "email": os.environ["STRAPI_OWNER_MAIL"], "password": os.environ["STRAPI_OWNER_PASS"]}
 print(base64.b64encode(json.dumps({"owner": owner, "accounts": accounts}).encode()).decode())')" || return 1 ;
-  ddev exec -d "${STRAPI_APP}" "STRAPI_SITE_ACCOUNTS=${payload} STRAPI_SITE_URL=http://127.0.0.1:${STRAPI_PORT} node --input-type=module - $*" < "${script}" ;
+  # The accounts go in on the standard input, as a first line before the script: on no command line
+  # a failed run prints.
+  { printf "globalThis.STRAPI_SITE_ACCOUNTS = '%s';\n" "${payload}"; cat "${script}"; } \
+    | ddev exec -d "${STRAPI_APP}" "STRAPI_SITE_URL=http://127.0.0.1:${STRAPI_PORT} node --input-type=module - $*" ;
 }
 
 # Build a Strapi app from nothing: the container, the installer, the settings of the container, with

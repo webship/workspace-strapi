@@ -44,16 +44,26 @@ function project(kind: 'strapi' | 'drupal') {
   return { root, dir, scripts };
 }
 
-/** Run bash with the plugin's functions sourced and `ddev` replaced by a recorder of its calls (and of what it reads on stdin). */
+/**
+ * Run bash with the plugin's functions sourced and `ddev` replaced by a recorder of its calls and of what it
+ * reads on stdin: the first line whole (`stdin1:`), then the start of the rest (`stdin:`).
+ */
 function bash(script: string, env: Record<string, string> = {}) {
-  const fake = 'ddev() { echo "ddev $*" >> "${DDEV_LOG:-/dev/null}" ; if [ ! -t 0 ] ; then head -c 120 | sed "s/^/  stdin: /" >> "${DDEV_LOG:-/dev/null}" ; echo >> "${DDEV_LOG:-/dev/null}" ; fi ; return 0 ; }';
+  const fake = 'ddev() { echo "ddev $*" >> "${DDEV_LOG:-/dev/null}" ; if [ ! -t 0 ] ; then IFS= read -r first ; echo "  stdin1: ${first}" >> "${DDEV_LOG:-/dev/null}" ; head -c 120 | sed "s/^/  stdin: /" >> "${DDEV_LOG:-/dev/null}" ; echo >> "${DDEV_LOG:-/dev/null}" ; fi ; return 0 ; }';
   return spawnSync('bash', ['-c', `${fake}\nsource ${FUNCTIONS}\n${script}`], { encoding: 'utf8', env: { ...process.env, ...env } });
 }
 
-/** The accounts a recorded call of strapi-site.mjs carried (the base64 of its JSON object). */
-function payloadOf(line: string) {
-  const m = line.match(/STRAPI_SITE_ACCOUNTS=(\S+)/);
-  assert.ok(m, `the call carries the accounts: ${line}`);
+/**
+ * The accounts a recorded call of strapi-site.mjs carried: the base64 of their JSON object, on the first line of
+ * its standard input, before the script, and never on its command line (a failed run prints that).
+ */
+function payloadOf(recorded: string) {
+  const lines = recorded.split('\n');
+  const call = lines.findIndex((l) => l.startsWith('ddev exec -d /var/www/html/app'));
+  assert.ok(call >= 0, `a call of the site script: ${recorded}`);
+  assert.doesNotMatch(lines[call], /STRAPI_SITE_ACCOUNTS/, 'no account on the command line');
+  const m = (lines[call + 1] || '').match(/^  stdin1: globalThis\.STRAPI_SITE_ACCOUNTS = '([A-Za-z0-9+\/=]+)';$/);
+  assert.ok(m, `the first line of its input carries the accounts: ${lines[call + 1]}`);
   return JSON.parse(Buffer.from(m![1], 'base64').toString('utf8'));
 }
 
@@ -81,7 +91,7 @@ test('the accounts are written by the site script with the app\'s Node.js, in th
   assert.match(call, /node --input-type=module - accounts add$/);
   assert.match(call, /STRAPI_SITE_URL=http:\/\/127\.0\.0\.1:1337 /, 'the script talks to the server in the container');
   assert.match(written, /stdin: \/\/ The test site of the step pack/, 'the script goes in on stdin');
-  const payload = payloadOf(call);
+  const payload = payloadOf(written);
   assert.deepStrictEqual(payload.accounts.map((a: any) => [a.handle, a.email, a.role]), [
     ['administrator', 'administrator@example.com', 'strapi-super-admin'],
     ['editor', 'editor@example.com', 'strapi-editor'],
@@ -97,9 +107,9 @@ test('cancelling the accounts deletes the default ones through the site script',
   const log = path.join(p.root, 'ddev.log');
   const r = bash('set_strapi_users ; cancel_strapi_users', { WORKSPACE_ROOT: p.root, WORKSPACE_SCRIPTS: p.scripts, doc_name: 'dev', PROJECT_NAME: 'site1', DDEV_LOG: log, account_name: 'owner1', account_mail: 'owner1@example.com', account_pass: 'x' });
   assert.strictEqual(r.status, 0, r.stderr + r.stdout);
-  const call = fs.readFileSync(log, 'utf8').split('\n').find((l) => l.includes(' - accounts cancel')) as string;
-  assert.ok(call, 'the cancel verb is called');
-  assert.deepStrictEqual(payloadOf(call).accounts.map((a: any) => a.handle), ['administrator', 'editor', 'author']);
+  const recorded = fs.readFileSync(log, 'utf8');
+  assert.ok(recorded.split('\n').find((l) => l.includes(' - accounts cancel')), 'the cancel verb is called');
+  assert.deepStrictEqual(payloadOf(recorded).accounts.map((a: any) => a.handle), ['administrator', 'editor', 'author']);
 });
 
 test('the builder refuses a --strapi-version that is not a release, and --add-users without --install, before it changes anything', () => {

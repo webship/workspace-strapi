@@ -8,12 +8,16 @@
 //   node --input-type=module - accounts add   the accounts (an account already there gets its name, password, role and active state back)
 //   node --input-type=module - accounts cancel | list | installed
 //   node --input-type=module - locales        the second locale (French)
-//   node --input-type=module - seed           the sample content: categories, articles, the homepage, media, an API token
+//   node --input-type=module - seed           the sample content: categories, articles, the homepage, media
 //
 // The verbs after `schema` talk to the running server, at STRAPI_SITE_URL, as
 // the owner account of STRAPI_SITE_ACCOUNTS (base64 of a JSON object:
 // { owner: {email, password}, accounts: [{handle, firstname, lastname, email,
-// password, role}] }). The accounts never go into a file of the project.
+// password, role}] }). The runners give it as a first line before this script
+// on the standard input (`globalThis.STRAPI_SITE_ACCOUNTS = '<base64>';`), so
+// it is in no command line a failed run prints; the variable of the same name
+// in the environment works for a run by hand. The accounts never go into a
+// file of the project.
 //
 // Everything here is the Community Edition: no Enterprise feature, no licence
 // key, no cloud project. What the build writes into the app is marked with
@@ -28,7 +32,7 @@ const BASE = (process.env.STRAPI_SITE_URL || 'http://127.0.0.1:1337').replace(/\
 const [verb, ...args] = process.argv.slice(2);
 
 function payload() {
-  const raw = process.env.STRAPI_SITE_ACCOUNTS;
+  const raw = globalThis.STRAPI_SITE_ACCOUNTS || process.env.STRAPI_SITE_ACCOUNTS;
   if (!raw) return { owner: null, accounts: [] };
   return JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
 }
@@ -237,7 +241,7 @@ async function call(method, url, body, { form = false, allow = [] } = {}) {
     const detail = json && json.error ? `${json.error.name}: ${json.error.message}${json.error.details && Object.keys(json.error.details).length ? ' ' + JSON.stringify(json.error.details) : ''}` : text.slice(0, 300);
     throw new Error(`${method} ${url} answered ${response.status}: ${detail}`);
   }
-  return { status: response.status, json };
+  return { status: response.status, json, headers: response.headers };
 }
 
 async function logIn() {
@@ -246,7 +250,17 @@ async function logIn() {
   if (TOKEN) return;
   const { owner } = payload();
   if (!owner) fail('No owner account in STRAPI_SITE_ACCOUNTS.');
-  const { json } = await call('POST', '/admin/login', { email: owner.email, password: owner.password });
+  const credentials = { email: owner.email, password: owner.password };
+  let { status, json, headers } = await call('POST', '/admin/login', credentials, { allow: [429] });
+  if (status === 429) {
+    // The admin's limit: 5 logins of an account in 5 minutes from one address. Wait once for its
+    // window to end (the admin says when, in seconds since the epoch), then log in again.
+    const reset = Number(headers.get('x-ratelimit-reset')) * 1000;
+    const wait = Math.min(Math.max((reset || Date.now() + 60000) - Date.now(), 0) + 1000, 6 * 60 * 1000);
+    console.log(`The admin allows 5 logins of an account in 5 minutes: waiting ${Math.round(wait / 1000)} s for its limit to end.`);
+    await new Promise((resolve) => setTimeout(resolve, wait));
+    ({ status, json, headers } = await call('POST', '/admin/login', credentials));
+  }
   TOKEN = json && json.data && (json.data.token || json.data.accessToken);
   if (!TOKEN) fail(`The owner ${owner.email} could not log in: ${JSON.stringify(json)}`);
 }
