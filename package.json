@@ -1,0 +1,98 @@
+{
+  "name": "@webship.co/workspace-strapi",
+  "version": "1.0.0",
+  "description": "Strapi for Webship Workspace: the builder (`cmd-strapi-project.sh`, an app made with the official installer, create-strapi, on PostgreSQL, with a content model and its sample content on request) and the Strapi CLI tool in every sites folder, the default accounts, the Strapi step pack wired into the testing setup, and its AI items in their folders: two agents, a skill, a command and two prompts.",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webship/workspace-strapi.git"
+  },
+  "files": [
+    "dist/src",
+    "ai",
+    "commands",
+    "features",
+    "scripts",
+    "testing",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build",
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "workspacePlugin": {
+    "name": "strapi",
+    "label": "Strapi",
+    "needs": [
+      [
+        "dev",
+        "test",
+        "sandboxes",
+        "demos"
+      ],
+      "ai-agents",
+      "ai-skills",
+      "ai-commands",
+      "ai-prompts"
+    ],
+    "commands": {
+      "types": [
+        "sites"
+      ],
+      "workspaces": [
+        "dev",
+        "test",
+        "sandboxes",
+        "demos"
+      ],
+      "files": [
+        "commands/cmd-strapi-project.sh",
+        "commands/cmd-tools-strapi-cli.sh"
+      ]
+    },
+    "scripts": {
+      "functions": [
+        "scripts/functions/fun-strapi.sh"
+      ],
+      "args": [
+        "scripts/args/arg-strapi.sh",
+        "scripts/args/arg-strapi-cli.sh"
+      ],
+      "machine": [
+        "scripts/strapi-site.mjs",
+        "testing/site.feature"
+      ]
+    },
+    "ai": {
+      "agents": [
+        "ai/agents/strapi-site-builder.md",
+        "ai/agents/strapi-tester.md"
+      ],
+      "skills": [
+        "ai/skills/strapi-scenarios"
+      ],
+      "commands": [
+        "ai/commands/strapi-test.md"
+      ],
+      "prompts": [
+        "ai/prompts/strapi-build-and-test.md",
+        "ai/prompts/strapi-scenarios-for-an-area.md"
+      ]
+    },
+    "features": [
+      "features/strapi.feature"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@webship.co/workspace-plugin-api": "^1.0.11",
+    "typescript": "^5.9.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
