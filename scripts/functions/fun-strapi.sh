@@ -139,15 +139,16 @@ function strapi_production_build() {
   strapi_restart ;
 }
 
-# Run verbs of strapi-site.mjs (config <url>, schema, accounts <verb>, locales, seed) with the app's
-# Node.js, in the folder of the app. The script is piped to Node.js, and the accounts travel as base64
+# Run verbs of strapi-site.mts (config <url>, schema, accounts <verb>, locales, seed) with the app's
+# Node.js, in the folder of the app. The script is TypeScript, piped to Node.js as it is
+# (--input-type=module-typescript), and the accounts travel as base64
 # of a JSON object, so no password is written into a file of the project and no quoting can break a
 # value. The owner is the workspace account: the Super Admin the verbs that talk to the admin's API
 # log in as.
 function strapi_site() {
-  local script="${WORKSPACE_SCRIPTS}/plugins/strapi/strapi-site.mjs" rows="" user name mail password role payload ;
+  local script="${WORKSPACE_SCRIPTS}/plugins/strapi/strapi-site.mts" rows="" user name mail password role payload ;
   if [ ! -f "${script}" ] ; then
-    echo "strapi-site.mjs is not in ${WORKSPACE_SCRIPTS}/plugins/strapi: install the plugin (plugins.sh --install strapi)." ;
+    echo "strapi-site.mts is not in ${WORKSPACE_SCRIPTS}/plugins/strapi: install the plugin (plugins.sh --install strapi)." ;
     return 1 ;
   fi
   for user in "${users[@]}" ; do
@@ -166,7 +167,7 @@ print(base64.b64encode(json.dumps({"owner": owner, "accounts": accounts}).encode
   # The accounts go in on the standard input, as a first line before the script: on no command line
   # a failed run prints.
   { printf "globalThis.STRAPI_SITE_ACCOUNTS = '%s';\n" "${payload}"; cat "${script}"; } \
-    | ddev exec -d "${STRAPI_APP}" "STRAPI_SITE_URL=http://127.0.0.1:${STRAPI_PORT} node --input-type=module - $*" ;
+    | ddev exec -d "${STRAPI_APP}" "STRAPI_SITE_URL=http://127.0.0.1:${STRAPI_PORT} node --input-type=module-typescript - $*" ;
 }
 
 # Build a Strapi app from nothing: the container, the installer, the settings of the container, with

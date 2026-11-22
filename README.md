@@ -66,7 +66,7 @@ Everything the builder runs for an app runs in the app's own container, through 
 | `commands/cmd-tools-strapi-cli.sh` | The Strapi CLI for one app: what the app is, a command, a new build, an update within its major release, a restart, the default accounts |
 | `scripts/functions/fun-strapi.sh` | The bash functions behind both, sourced by bootstrap once installed; the names the core's tools look for (`set_strapi_users`, `add_strapi_users`, `cancel_strapi_users`, `testing_configure_strapi`) |
 | `scripts/args/arg-strapi.sh`, `arg-strapi-cli.sh` | Their argparse; the Build form draws the builder's flags from the first |
-| `scripts/strapi-site.mjs` | Run with the app's Node.js in the project's container: the address of the app and its proxy, the content model as schema files, the accounts, the second locale and the sample content through the admin's own API (the same script the step pack's test site is built with) |
+| `scripts/strapi-site.mts` | Run with the app's Node.js in the project's container: the address of the app and its proxy, the content model as schema files, the accounts, the second locale and the sample content through the admin's own API (the same script the step pack's test site is built with) |
 | `testing/site.feature` | The first feature a Strapi app gets when testing is set up |
 | `ai/agents/strapi-site-builder.md` | The agent that builds and maintains Strapi apps with these commands |
 | `ai/agents/strapi-tester.md` | The agent that writes and runs scenarios with the Strapi step pack |
@@ -91,7 +91,7 @@ reference and changes only this:
 | Database | The container tool's default, settings written by the tool | PostgreSQL 17 from the container tool; the installer writes the container's own `db` / `db` / `db` into `app/.env` |
 | Getting the code | `wp core download` | `npx create-strapi@latest app --skip-cloud`: the official installer, without the cloud login, TypeScript, npm |
 | Install | `wp core install` | `strapi build` for production; with `--install` the workspace account is made the Super Admin with `strapi admin:create-user` |
-| Accounts | WP-CLI | `scripts/strapi-site.mjs`, through the admin's own API (the role API) |
+| Accounts | WP-CLI | `scripts/strapi-site.mts`, through the admin's own API (the role API) |
 | Users menu of the row | Reads the project type | None (the type is `generic`; the Tests menu's test users items hand it the Webship list): the Strapi CLI tool's `--add-users`, or `cmd-tools-add-users.sh <name> strapi` |
 
 The Community Edition only: the installer runs with `--skip-cloud` (no cloud login, no trial),
@@ -259,10 +259,15 @@ plugin's own.
 
 ```bash
 npm install     # builds dist/ (TypeScript)
-npm run lint
-npm test        # the manifest, the commands, the AI items, the functions against a scaffolded project
+npm run lint    # tsc over src/ and tests/, and over the site script (tsconfig.scripts.json)
+npm test        # the manifest, the commands, the AI items, the functions against a scaffolded project, the site script on an app folder and against a stand-in for the admin's API
 ```
 
-CI runs the same on Node.js 20 and 24, parses every shell script, and runs the plugin's
+The plugin is TypeScript throughout. `scripts/strapi-site.mts` is not compiled: the functions of the plugin
+pipe it to `node --input-type=module-typescript -` in the project's container and Node.js runs it as it is
+(type stripping, from Node.js 22.18, the lowest the Workspace accepts). It is an ES module with erasable
+syntax only.
+
+CI runs the same on Node.js 22 and 26, parses every shell script, and runs the plugin's
 `features/strapi.feature` against a dashboard with this plugin installed
 (`webship/workspace/.github/workflows/plugin-browser-suite.yml`).
