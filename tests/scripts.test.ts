@@ -40,7 +40,7 @@ function project(kind: 'strapi' | 'drupal') {
   const scripts = path.join(root, 'core', 'scripts');
   fs.mkdirSync(path.join(scripts, 'plugins', 'strapi'), { recursive: true });
   fs.copyFileSync(path.join(PKG, 'testing', 'site.feature'), path.join(scripts, 'plugins', 'strapi', 'site.feature'));
-  fs.copyFileSync(path.join(PKG, 'scripts', 'strapi-site.mjs'), path.join(scripts, 'plugins', 'strapi', 'strapi-site.mjs'));
+  fs.copyFileSync(path.join(PKG, 'scripts', 'strapi-site.mts'), path.join(scripts, 'plugins', 'strapi', 'strapi-site.mts'));
   return { root, dir, scripts };
 }
 
@@ -54,7 +54,7 @@ function bash(script: string, env: Record<string, string> = {}) {
 }
 
 /**
- * The accounts a recorded call of strapi-site.mjs carried: the base64 of their JSON object, on the first line of
+ * The accounts a recorded call of strapi-site.mts carried: the base64 of their JSON object, on the first line of
  * its standard input, before the script, and never on its command line (a failed run prints that).
  */
 function payloadOf(recorded: string) {
@@ -88,7 +88,7 @@ test('the accounts are written by the site script with the app\'s Node.js, in th
   assert.strictEqual(r.status, 0, r.stderr + r.stdout);
   const written = fs.readFileSync(log, 'utf8');
   const call = written.split('\n').find((l) => l.startsWith('ddev exec -d /var/www/html/app')) as string;
-  assert.match(call, /node --input-type=module - accounts add$/);
+  assert.match(call, /node --input-type=module-typescript - accounts add$/);
   assert.match(call, /STRAPI_SITE_URL=http:\/\/127\.0\.0\.1:1337 /, 'the script talks to the server in the container');
   assert.match(written, /stdin: \/\/ The test site of the step pack/, 'the script goes in on stdin');
   const payload = payloadOf(written);

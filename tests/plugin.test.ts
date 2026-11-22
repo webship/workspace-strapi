@@ -47,12 +47,17 @@ test('every shell script parses', () => {
   }
 });
 
-test('the site script is a module the app\'s Node.js can run, with every verb the functions call', () => {
-  const src = read('scripts/strapi-site.mjs');
-  for (const verb of ['config', 'schema', 'accounts', 'locales', 'seed']) assert.match(src, new RegExp(`word === '${verb}'`), `strapi-site.mjs has the verb ${verb}`);
-  for (const verb of ['installed', 'add', 'cancel', 'list']) assert.match(src, new RegExp(`sub [!=]== '${verb}'`), `strapi-site.mjs has accounts ${verb}`);
-  const r = spawnSync(process.execPath, ['--check', path.join(PKG, 'scripts', 'strapi-site.mjs')], { encoding: 'utf8' });
-  assert.strictEqual(r.status, 0, r.stderr);
+test('the site script is TypeScript the app\'s Node.js runs as it is, with every verb the functions call', () => {
+  const src = read('scripts/strapi-site.mts');
+  for (const verb of ['config', 'schema', 'accounts', 'locales', 'seed']) assert.match(src, new RegExp(`word === '${verb}'`), `strapi-site.mts has the verb ${verb}`);
+  for (const verb of ['installed', 'add', 'cancel', 'list']) assert.match(src, new RegExp(`sub [!=]== '${verb}'`), `strapi-site.mts has accounts ${verb}`);
+  // Piped to node as the functions run it: without a verb it says what it takes.
+  const r = spawnSync(process.execPath, ['--input-type=module-typescript', '-'], { encoding: 'utf8', input: src });
+  assert.strictEqual(r.status, 1, r.stderr);
+  assert.strictEqual(r.stderr.trim(), 'strapi-site.mts takes config <url>, schema, accounts <add|cancel|list|installed>, locales or seed.');
+  // Erasable syntax only, and type-checked by the lint.
+  assert.doesNotMatch(src, /^\s*(enum|namespace)\s|^import .* = require\(|\/\/ @ts-nocheck|: any\b/m);
+  assert.match(JSON.parse(read('package.json')).scripts.lint, /tsconfig\.scripts\.json/, 'npm run lint type-checks it');
   assert.match(src, /Community Edition: no Enterprise feature, no licence/, 'the site script says it is the Community Edition only');
 });
 

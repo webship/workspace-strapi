@@ -22,7 +22,7 @@
     "build": "tsc -p tsconfig.json",
     "prepare": "npm run build",
     "test": "npm run build && node --test dist/tests/*.test.js",
-    "lint": "tsc -p tsconfig.json --noEmit"
+    "lint": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.scripts.json"
   },
   "workspacePlugin": {
     "name": "strapi",
@@ -63,7 +63,7 @@
         "scripts/args/arg-strapi-cli.sh"
       ],
       "machine": [
-        "scripts/strapi-site.mjs",
+        "scripts/strapi-site.mts",
         "testing/site.feature"
       ]
     },
