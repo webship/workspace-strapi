@@ -265,9 +265,9 @@ npm test        # the manifest, the commands, the AI items, the functions agains
 
 The plugin is TypeScript throughout. `scripts/strapi-site.mts` is not compiled: the functions of the plugin
 pipe it to `node --input-type=module-typescript -` in the project's container and Node.js runs it as it is
-(type stripping, from Node.js 22.18, the lowest the Workspace accepts). It is an ES module with erasable
+(type stripping, on Node.js 24, the lowest the Workspace accepts). It is an ES module with erasable
 syntax only.
 
-CI runs the same on Node.js 22 and 26, parses every shell script, and runs the plugin's
+CI runs the same on Node.js 24 and 26, parses every shell script, and runs the plugin's
 `features/strapi.feature` against a dashboard with this plugin installed
 (`webship/workspace/.github/workflows/plugin-browser-suite.yml`).
