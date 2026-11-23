@@ -25,7 +25,7 @@
 // "Webship test site" in each file.
 //
 // TypeScript, with erasable syntax only, so nothing is built: Node.js runs it
-// as it is (type stripping, from Node.js 22.18; on standard input it needs
+// as it is (type stripping, Node.js 24 or later; on standard input it needs
 // --input-type=module-typescript). `npm run lint` of the plugin type-checks it.
 
 import fs from 'node:fs';
